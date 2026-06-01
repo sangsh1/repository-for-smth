@@ -1,7 +1,7 @@
 import streamlit as st
 
 st.set_page_config(
-    page_title="이한빈의 스키비디 토일렛 위키",
+    page_title="이한빈이 말아주는 스키비디 토일렛 위키",
     page_icon="🚽",
     layout="wide",
     initial_sidebar_state="expanded",
