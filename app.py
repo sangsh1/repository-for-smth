@@ -21,7 +21,7 @@ resize();
 const FONT_SIZE = 36;
 ctx.font = `bold ${FONT_SIZE}px sans-serif`;
 
-const words = ['한빈이', '스키비디', '낮은목소리로', '율언이', '백룸', '노잼'];
+const words = ['한빈이', '한빈이', '한빈이', '율언이', '율언이', '율언이'];
 const colors = ['#a78bfa', '#fb923c', '#34d399', '#f472b6', '#60a5fa', '#fbbf24'];
 
 const balls = words.map((text, i) => {
