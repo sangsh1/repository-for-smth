@@ -1,10 +1,16 @@
 import streamlit as st
-import json
-import os
-import random
+from streamlit_autorefresh import st_autorefresh
+from streamlit_mic_recorder import mic_recorder
 from datetime import datetime
 from gtts import gTTS
-from streamlit_autorefresh import st_autorefresh
+import json
+import random
+import os
+import re
+
+# --------------------
+# 설정
+# --------------------
 
 ALARM_FILE = "alarms.json"
 
@@ -16,11 +22,11 @@ st.set_page_config(
 st.title("⏰ 외출시간 음성 알람")
 
 # 5초마다 새로고침
-st_autorefresh(interval=5000, key="refresh")
+st_autorefresh(interval=5000, key="alarm_refresh")
 
-# -----------------
-# 파일 관리
-# -----------------
+# --------------------
+# 저장 함수
+# --------------------
 
 def load_alarms():
     if os.path.exists(ALARM_FILE):
@@ -34,79 +40,163 @@ def save_alarms(data):
 
 alarms = load_alarms()
 
-# -----------------
-# 알람 추가
-# -----------------
+# --------------------
+# 음성 인식 (간단 버전)
+# --------------------
 
-st.subheader("📅 외출 시간 예약")
+def parse_time(text):
 
-alarm_time = st.datetime_input(
-    "외출 시간 선택",
-    value=datetime.now()
+    hour_match = re.search(r"(\d+)시", text)
+
+    if hour_match:
+        hour = int(hour_match.group(1))
+
+        tomorrow = datetime.now()
+
+        alarm_time = tomorrow.replace(
+            hour=hour,
+            minute=0,
+            second=0,
+            microsecond=0
+        )
+
+        if alarm_time < datetime.now():
+            from datetime import timedelta
+            alarm_time += timedelta(days=1)
+
+        return alarm_time
+
+    return None
+
+# --------------------
+# 음성 알람 등록
+# --------------------
+
+st.subheader("🎤 음성으로 알람 설정")
+
+audio = mic_recorder(
+    start_prompt="녹음 시작",
+    stop_prompt="녹음 종료",
+    key="recorder"
 )
 
-if st.button("알람 예약"):
+st.info(
+    "예시: 내일 7시 알람 설정해줘"
+)
+
+if audio:
+
+    st.success("음성 녹음 완료")
+
+    # Streamlit Cloud에서 STT가 제한적이라
+    # 텍스트 입력 대체
+
+    voice_text = st.text_input(
+        "인식된 문장을 입력해보세요",
+        placeholder="내일 7시 알람 설정"
+    )
+
+    if st.button("음성 알람 등록"):
+
+        alarm_dt = parse_time(voice_text)
+
+        if alarm_dt:
+
+            alarms.append({
+                "time": alarm_dt.strftime("%Y-%m-%d %H:%M")
+            })
+
+            save_alarms(alarms)
+
+            st.success(
+                f"알람 등록 완료 : {alarm_dt}"
+            )
+
+        else:
+            st.error("시간을 찾을 수 없습니다.")
+
+# --------------------
+# 수동 등록
+# --------------------
+
+st.subheader("📅 직접 알람 등록")
+
+alarm_datetime = st.datetime_input(
+    "외출 시간"
+)
+
+if st.button("알람 추가"):
+
     alarms.append({
-        "time": alarm_time.strftime("%Y-%m-%d %H:%M")
+        "time": alarm_datetime.strftime("%Y-%m-%d %H:%M")
     })
 
     save_alarms(alarms)
 
-    st.success("예약 완료!")
+    st.success("등록 완료")
 
-# -----------------
+# --------------------
 # 알람 목록
-# -----------------
+# --------------------
 
 st.subheader("📋 예약 목록")
 
 for idx, alarm in enumerate(alarms):
 
-    col1, col2 = st.columns([4,1])
+    col1, col2 = st.columns([5,1])
 
     with col1:
         st.write(alarm["time"])
 
     with col2:
-        if st.button("삭제", key=idx):
+
+        if st.button(
+            "삭제",
+            key=f"del_{idx}"
+        ):
+
             alarms.pop(idx)
+
             save_alarms(alarms)
+
             st.rerun()
 
-# -----------------
-# 알람 확인
-# -----------------
+# --------------------
+# 알람 실행
+# --------------------
 
 now = datetime.now()
 
 funny_messages = [
-    "일어나세요. 외출 시간입니다.",
-    "출발하지 않으면 지각입니다.",
-    "버스가 당신을 기다리지 않습니다.",
-    "5분만 더는 허용되지 않습니다.",
-    "오늘도 멋진 하루 시작해봅시다."
+    "일어나라 인간이여. 외출 시간이다.",
+    "지금 안 나가면 지각이다.",
+    "버스는 당신을 기다리지 않는다.",
+    "5분만 더는 금지다.",
+    "오늘도 힘내서 출발해보자."
 ]
 
 for alarm in alarms:
 
-    alarm_dt = datetime.strptime(
+    alarm_time = datetime.strptime(
         alarm["time"],
         "%Y-%m-%d %H:%M"
     )
 
     if (
-        now.year == alarm_dt.year and
-        now.month == alarm_dt.month and
-        now.day == alarm_dt.day and
-        now.hour == alarm_dt.hour and
-        now.minute == alarm_dt.minute
+        now.year == alarm_time.year and
+        now.month == alarm_time.month and
+        now.day == alarm_time.day and
+        now.hour == alarm_time.hour and
+        now.minute == alarm_time.minute
     ):
-
-        msg = random.choice(funny_messages)
 
         st.balloons()
 
-        st.error("🚨 외출 시간입니다!")
+        msg = random.choice(
+            funny_messages
+        )
+
+        st.error("🚨 외출 시간!")
 
         st.write(msg)
 
@@ -117,13 +207,18 @@ for alarm in alarms:
 
         tts.save("alarm.mp3")
 
-        with open("alarm.mp3", "rb") as f:
+        with open(
+            "alarm.mp3",
+            "rb"
+        ) as f:
+
             st.audio(
                 f.read(),
                 format="audio/mp3"
             )
 
         alarms.remove(alarm)
+
         save_alarms(alarms)
 
         break
