@@ -12,7 +12,7 @@ st.set_page_config(
 st.markdown(
     """
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Playfair+Display:ital,wght@0,600;1,400&display=swap');
+    @import url('[https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Playfair+Display:ital,wght@0,600;1,400&display=swap](https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Playfair+Display:ital,wght@0,600;1,400&display=swap)');
     
     /* 기본 폰트 설정 및 배경색 조정 */
     html, body, [class*="css"] {
@@ -359,13 +359,3 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
-```
-eof
-
-### 💎 주요 구현 특징
-1. **Premium & Luxurious UI**: 깊고 우아한 Midnight 인디고 톤을 베이스로, `Playfair Display`와 `Noto Sans` 폰트 조합의 고품격 웹 레이아웃을 완성했습니다.
-2. **Smooth Transitions (부드러운 상호작용)**: 
-   - 메인 화면 로드 시 카드들이 차례로 떠오르는 `fadeInUp` 및 `fadeInDown` 키프레임 애니메이션을 도입했습니다.
-   - 각 핵심 기능 카드에 마우스를 올리면 **Cubic-Bezier 타이밍 함수**가 적용되어 아이콘이 살짝 회전 및 스케일업되며 카드가 유연하게 솟아오르는 인터랙티브 경험을 제공합니다.
-3. **Responsive Information Tabs**: 하단에는 Streamlit의 내장 탭을 완벽히 스타일링하여 탭을 클릭해 전환할 때 부드럽게 상세 텍스트가 뷰어 박스 안에서 전개되도록 세팅했습니다.
-4. **Zero-Error Architecture**: 순수 HTML/CSS 마크다운 구조와 슬림한 기본 Streamlit 기능을 엮어, 커뮤니티 클라우드 배포 시 빌드 에러 없이 즉각 구동되도록 최적화했습니다.
