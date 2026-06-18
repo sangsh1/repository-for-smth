@@ -197,7 +197,7 @@ with col1:
         <div class="card-container" style="animation-delay: 0.1s;">
             <div>
                 <div class="card-icon">🌙</div>
-                <div class="card-title">취침시간 추천 계산기</div>
+                <div class="card-title">취침시간 패턴 분석기</div>
                 <div class="card-desc">인체의 90분 수면 사이클 분석을 적용해 가장 개운하게 일어날 수 있는 맞춤 입면 타이밍을 설계합니다.</div>
             </div>
             <div class="card-badge">바이오리듬 최적화</div>
