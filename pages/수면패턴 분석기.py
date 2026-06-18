@@ -11,7 +11,7 @@ st.set_page_config(
 # 2. AI 수면 컨설팅 로직 (Gemini API)
 def get_ai_feedback(efficiency, debt, latency, wakes):
     try:
-        # Secret에서 API 키 안전하게 로드
+        # [중요] Streamlit Cloud의 Secrets 관리자로부터 GEMINI_API_KEY를 안전하게 가져옵니다.
         api_key = st.secrets["GEMINI_API_KEY"]
         genai.configure(api_key=api_key)
         
@@ -38,6 +38,8 @@ def get_ai_feedback(efficiency, debt, latency, wakes):
         
         response = model.generate_content(prompt)
         return response.text
+    except KeyError:
+        return "❌ 오류: Streamlit 시스템 내에 'GEMINI_API_KEY' 가 등록되지 않았습니다. 하단의 Secrets 설정 가이드를 확인해 주세요."
     except Exception as e:
         return f"죄송합니다. AI 컨설턴트와의 연결이 원활하지 않습니다. (사유: {str(e)})"
 
