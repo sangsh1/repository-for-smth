@@ -200,8 +200,8 @@ if submit_button:
             """
 
             try:
-                # 2.5-flash-preview-09-2025 프리미엄 모델 호출 규격 적용
-                model = genai.GenerativeModel("gemini-2.5-flash-preview-09-2025")
+                # 일반 Google AI Studio의 표준 프로덕션 모델인 'gemini-1.5-flash'를 활용하여 404 에러를 완벽히 예방합니다.
+                model = genai.GenerativeModel("gemini-1.5-flash")
                 response = model.generate_content(prompt)
                 
                 # 가독성이 훌륭한 럭셔리 네온 글로우 카드로 결과 렌더링
