@@ -1,224 +1,82 @@
 import streamlit as st
-from streamlit_autorefresh import st_autorefresh
-from streamlit_mic_recorder import mic_recorder
-from datetime import datetime
-from gtts import gTTS
-import json
+import datetime
 import random
-import os
-import re
 
-# --------------------
-# 설정
-# --------------------
+# 페이지 설정
+st.set_page_config(page_title="출발해라 인간", page_icon="⏰", layout="centered")
 
-ALARM_FILE = "alarms.json"
+# 세션 상태 초기화 (재미있는 멘트 재생성용)
+if "nag_message" not in st.session_state:
+    st.session_state.nag_message = ""
 
-st.set_page_config(
-    page_title="외출시간 알람",
-    page_icon="⏰"
-)
+# 헤더 영역
+st.title("⏰ 집돌이·집순이 탈출 타이머")
+st.subheader("계획대로 나가본 적이 없는 당신을 위한 맞춤형 출발 가이드")
 
-st.title("⏰ 외출시간 음성 알람")
+# 입력 구역
+st.markdown("---")
+col1, col2 = st.columns(2)
 
-# 5초마다 새로고침
-st_autorefresh(interval=5000, key="alarm_refresh")
+with col1:
+    appointment_time = st.time_input("약속 시간은 언제인가요?", datetime.time(18, 0))
+    travel_time = st.number_input("이동 시간 (분 단위)", min_value=5, max_value=300, value=30, step=5)
 
-# --------------------
-# 저장 함수
-# --------------------
-
-def load_alarms():
-    if os.path.exists(ALARM_FILE):
-        with open(ALARM_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    return []
-
-def save_alarms(data):
-    with open(ALARM_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
-
-alarms = load_alarms()
-
-# --------------------
-# 음성 인식 (간단 버전)
-# --------------------
-
-def parse_time(text):
-
-    hour_match = re.search(r"(\d+)시", text)
-
-    if hour_match:
-        hour = int(hour_match.group(1))
-
-        tomorrow = datetime.now()
-
-        alarm_time = tomorrow.replace(
-            hour=hour,
-            minute=0,
-            second=0,
-            microsecond=0
-        )
-
-        if alarm_time < datetime.now():
-            from datetime import timedelta
-            alarm_time += timedelta(days=1)
-
-        return alarm_time
-
-    return None
-
-# --------------------
-# 음성 알람 등록
-# --------------------
-
-st.subheader("🎤 음성으로 알람 설정")
-
-audio = mic_recorder(
-    start_prompt="녹음 시작",
-    stop_prompt="녹음 종료",
-    key="recorder"
-)
-
-st.info(
-    "예시: 내일 7시 알람 설정해줘"
-)
-
-if audio:
-
-    st.success("음성 녹음 완료")
-
-    # Streamlit Cloud에서 STT가 제한적이라
-    # 텍스트 입력 대체
-
-    voice_text = st.text_input(
-        "인식된 문장을 입력해보세요",
-        placeholder="내일 7시 알람 설정"
+with col2:
+    purpose = st.selectbox(
+        "오늘의 외출 목적은?",
+        ["중요한 비즈니스", "이성과의 데이트", "친구들과의 소소한 모임", "귀찮지만 가야 하는 출근/등교", "숨쉬듯 자연스러운 덕질"]
+    )
+    persona = st.radio(
+        "알림 스타일 선택",
+        ["팩트폭행형", "둥둥이 응원형", "스파르타 교관형"]
     )
 
-    if st.button("음성 알람 등록"):
+# 계산 로직
+now = datetime.datetime.now()
+appointment_datetime = datetime.combine(now.date(), appointment_time)
 
-        alarm_dt = parse_time(voice_text)
+# 약속 시간이 이미 지났다면 내일로 처리
+if appointment_datetime < now:
+    appointment_datetime += datetime.timedelta(days=1)
 
-        if alarm_dt:
+# 출발해야 하는 시간 계산
+departure_datetime = appointment_datetime - datetime.timedelta(minutes=travel_time)
+time_left = departure_datetime - now
+minutes_left = int(time_left.total_seconds() / 60)
 
-            alarms.append({
-                "time": alarm_dt.strftime("%Y-%m-%d %H:%M")
-            })
+# 결과 출력 구역
+st.markdown("---")
+st.markdown(f"### 🚀 당신이 현관문을 열고 나가야 할 시간: **{departure_datetime.strftime('%H시 %M분')}**")
 
-            save_alarms(alarms)
+# 동적 UI 및 잔소리 로직
+if minutes_left > 60:
+    st.success(f"여유 부릴 시간 딱 {minutes_left // 60}시간 {minutes_left % 60}분 남았습니다. 아직은 침대와 한 몸이어도 무죄.")
+elif 0 <= minutes_left <= 60:
+    st.warning(f"🚨 긴급! 출발까지 **{minutes_left}분** 남았습니다. 양치하면서 옷 고르세요.")
+else:
+    st.error(f"☠️ 이미 {abs(minutes_left)}분 전에 나갔어야 했습니다. 카카오T를 부르거나 대가리 박고 사과문부터 작성하세요.")
 
-            st.success(
-                f"알람 등록 완료 : {alarm_dt}"
-            )
+# 재미있는 맞춤형 잔소리 생성기
+nags = {
+    "팩트폭행형": [
+        f"누가 보면 {purpose}에 목숨 안 건 줄 알겠어요. 지금 안 나가면 늦습니다.",
+        "당신의 '지금 나감'은 거짓말인 거 온 세상이 다 압니다. 빨리 신발 신으세요.",
+        "이동 시간 {travel_time}분은 축지법 기준이 아닙니다. 인간계의 물리 법칙을 따르세요."
+    ],
+    "둥둥이 응원형": [
+        f"오늘 {purpose} 목적으로 엄청 빛나실 예정! 늦어서 허둥대면 아쉽잖아요. 무브무브!",
+        "할 수 있다! 씻는 것부터 옷 입기까지 10분 컷 도전!",
+        "지각해서 미안해하는 눈빛보다 정시 도착해서 당당한 미소가 더 아름답습니다 ✨"
+    ],
+    "스파르타 교관형": [
+        f"정신 안 차립니까? {purpose}(이)가 장난입니까? 당장 침대에서 인공위성처럼 사출되십시오.",
+        "당신의 나태함이 약속을 파괴하고 있습니다. 3분 내로 양말 안 신으면 탈락입니다.",
+        "움직여라 인간! 패배자는 침대에 누워있고, 승리자는 약속 장소에 10분 먼저 도착한다!"
+    ]
+}
 
-        else:
-            st.error("시간을 찾을 수 없습니다.")
+if st.button("🔥 내 정신을 깨우는 한마디 보기"):
+    st.session_state.nag_message = random.choice(nags[persona]).format(purpose=purpose, travel_time=travel_time)
 
-# --------------------
-# 수동 등록
-# --------------------
-
-st.subheader("📅 직접 알람 등록")
-
-alarm_datetime = st.datetime_input(
-    "외출 시간"
-)
-
-if st.button("알람 추가"):
-
-    alarms.append({
-        "time": alarm_datetime.strftime("%Y-%m-%d %H:%M")
-    })
-
-    save_alarms(alarms)
-
-    st.success("등록 완료")
-
-# --------------------
-# 알람 목록
-# --------------------
-
-st.subheader("📋 예약 목록")
-
-for idx, alarm in enumerate(alarms):
-
-    col1, col2 = st.columns([5,1])
-
-    with col1:
-        st.write(alarm["time"])
-
-    with col2:
-
-        if st.button(
-            "삭제",
-            key=f"del_{idx}"
-        ):
-
-            alarms.pop(idx)
-
-            save_alarms(alarms)
-
-            st.rerun()
-
-# --------------------
-# 알람 실행
-# --------------------
-
-now = datetime.now()
-
-funny_messages = [
-    "일어나라 인간이여. 외출 시간이다.",
-    "지금 안 나가면 지각이다.",
-    "버스는 당신을 기다리지 않는다.",
-    "5분만 더는 금지다.",
-    "오늘도 힘내서 출발해보자."
-]
-
-for alarm in alarms:
-
-    alarm_time = datetime.strptime(
-        alarm["time"],
-        "%Y-%m-%d %H:%M"
-    )
-
-    if (
-        now.year == alarm_time.year and
-        now.month == alarm_time.month and
-        now.day == alarm_time.day and
-        now.hour == alarm_time.hour and
-        now.minute == alarm_time.minute
-    ):
-
-        st.balloons()
-
-        msg = random.choice(
-            funny_messages
-        )
-
-        st.error("🚨 외출 시간!")
-
-        st.write(msg)
-
-        tts = gTTS(
-            text=msg,
-            lang="ko"
-        )
-
-        tts.save("alarm.mp3")
-
-        with open(
-            "alarm.mp3",
-            "rb"
-        ) as f:
-
-            st.audio(
-                f.read(),
-                format="audio/mp3"
-            )
-
-        alarms.remove(alarm)
-
-        save_alarms(alarms)
-
-        break
+if st.session_state.nag_message:
+    st.info(f"💬 **[{persona}]** {st.session_state.nag_message}")
