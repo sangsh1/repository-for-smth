@@ -1,8 +1,8 @@
 import streamlit as st
-import datetime
+from datetime import datetime, timedelta, time
 import random
 
-# 페이지 설정
+# 페이지 설정 (다중 페이지 앱의 경우 메인에서 이미 설정했다면 생략 가능)
 st.set_page_config(page_title="출발해라 인간", page_icon="⏰", layout="centered")
 
 # 세션 상태 초기화 (재미있는 멘트 재생성용)
@@ -18,7 +18,7 @@ st.markdown("---")
 col1, col2 = st.columns(2)
 
 with col1:
-    appointment_time = st.time_input("약속 시간은 언제인가요?", datetime.time(18, 0))
+    appointment_time = st.time_input("약속 시간은 언제인가요?", time(18, 0))
     travel_time = st.number_input("이동 시간 (분 단위)", min_value=5, max_value=300, value=30, step=5)
 
 with col2:
@@ -31,16 +31,16 @@ with col2:
         ["팩트폭행형", "둥둥이 응원형", "스파르타 교관형"]
     )
 
-# 계산 로직
-now = datetime.datetime.now()
+# 계산 로직 (에러 수정 지점)
+now = datetime.now()
 appointment_datetime = datetime.combine(now.date(), appointment_time)
 
 # 약속 시간이 이미 지났다면 내일로 처리
 if appointment_datetime < now:
-    appointment_datetime += datetime.timedelta(days=1)
+    appointment_datetime += timedelta(days=1)
 
 # 출발해야 하는 시간 계산
-departure_datetime = appointment_datetime - datetime.timedelta(minutes=travel_time)
+departure_datetime = appointment_datetime - timedelta(minutes=travel_time)
 time_left = departure_datetime - now
 minutes_left = int(time_left.total_seconds() / 60)
 
@@ -61,7 +61,7 @@ nags = {
     "팩트폭행형": [
         f"누가 보면 {purpose}에 목숨 안 건 줄 알겠어요. 지금 안 나가면 늦습니다.",
         "당신의 '지금 나감'은 거짓말인 거 온 세상이 다 압니다. 빨리 신발 신으세요.",
-        "이동 시간 {travel_time}분은 축지법 기준이 아닙니다. 인간계의 물리 법칙을 따르세요."
+        f"이동 시간 {travel_time}분은 축지법 기준이 아닙니다. 인간계의 물리 법칙을 따르세요."
     ],
     "둥둥이 응원형": [
         f"오늘 {purpose} 목적으로 엄청 빛나실 예정! 늦어서 허둥대면 아쉽잖아요. 무브무브!",
@@ -76,7 +76,8 @@ nags = {
 }
 
 if st.button("🔥 내 정신을 깨우는 한마디 보기"):
-    st.session_state.nag_message = random.choice(nags[persona]).format(purpose=purpose, travel_time=travel_time)
+    st.session_state.nag_message = random.choice(nags[persona])
 
 if st.session_state.nag_message:
     st.info(f"💬 **[{persona}]** {st.session_state.nag_message}")
+    
