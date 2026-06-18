@@ -1,21 +1,27 @@
 import streamlit as st
 import json
 import os
+import random
 from datetime import datetime
 from gtts import gTTS
 from streamlit_autorefresh import st_autorefresh
-import speech_recognition as sr
 
 ALARM_FILE = "alarms.json"
 
-# 자동 새로고침
-st_autorefresh(interval=5000, key="alarm_refresh")
+st.set_page_config(
+    page_title="외출시간 알람",
+    page_icon="⏰"
+)
 
-st.title("🎒 외출시간 음성 알람")
+st.title("⏰ 외출시간 음성 알람")
 
-# --------------------
-# 알람 저장/불러오기
-# --------------------
+# 5초마다 새로고침
+st_autorefresh(interval=5000, key="refresh")
+
+# -----------------
+# 파일 관리
+# -----------------
+
 def load_alarms():
     if os.path.exists(ALARM_FILE):
         with open(ALARM_FILE, "r", encoding="utf-8") as f:
@@ -24,126 +30,100 @@ def load_alarms():
 
 def save_alarms(data):
     with open(ALARM_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False)
+        json.dump(data, f, ensure_ascii=False, indent=2)
 
 alarms = load_alarms()
 
-# --------------------
-# 음성 입력
-# --------------------
-st.header("🎤 음성으로 알람 설정")
+# -----------------
+# 알람 추가
+# -----------------
 
-audio_file = st.file_uploader(
-    "음성을 녹음해서 업로드하세요 (wav 권장)",
-    type=["wav"]
+st.subheader("📅 외출 시간 예약")
+
+alarm_time = st.datetime_input(
+    "외출 시간 선택",
+    value=datetime.now()
 )
 
-if audio_file:
-    recognizer = sr.Recognizer()
-
-    with open("temp.wav", "wb") as f:
-        f.write(audio_file.read())
-
-    with sr.AudioFile("temp.wav") as source:
-        audio = recognizer.record(source)
-
-    try:
-        text = recognizer.recognize_google(audio, language="ko-KR")
-
-        st.success(f"인식 결과: {text}")
-
-        # 간단 예시
-        if "7시" in text:
-            alarm_time = (
-                datetime.now()
-                .replace(hour=7, minute=0, second=0)
-            )
-
-            alarms.append({
-                "time": alarm_time.strftime("%Y-%m-%d %H:%M"),
-                "message": "외출 준비하세요!"
-            })
-
-            save_alarms(alarms)
-
-            st.success("알람 설정 완료!")
-
-    except Exception as e:
-        st.error("음성 인식 실패")
-
-# --------------------
-# 수동 설정
-# --------------------
-st.header("⏰ 직접 설정")
-
-alarm_datetime = st.datetime_input(
-    "외출 시간 선택"
-)
-
-if st.button("알람 추가"):
+if st.button("알람 예약"):
     alarms.append({
-        "time": alarm_datetime.strftime("%Y-%m-%d %H:%M"),
-        "message": "외출 준비하세요!"
+        "time": alarm_time.strftime("%Y-%m-%d %H:%M")
     })
 
     save_alarms(alarms)
-    st.success("추가 완료")
 
-# --------------------
-# 예약 목록
-# --------------------
-st.header("📋 예약된 알람")
+    st.success("예약 완료!")
+
+# -----------------
+# 알람 목록
+# -----------------
+
+st.subheader("📋 예약 목록")
 
 for idx, alarm in enumerate(alarms):
-    st.write(alarm["time"])
 
-    if st.button(f"삭제 {idx}"):
-        alarms.pop(idx)
-        save_alarms(alarms)
-        st.rerun()
+    col1, col2 = st.columns([4,1])
 
-# --------------------
-# 알람 체크
-# --------------------
+    with col1:
+        st.write(alarm["time"])
+
+    with col2:
+        if st.button("삭제", key=idx):
+            alarms.pop(idx)
+            save_alarms(alarms)
+            st.rerun()
+
+# -----------------
+# 알람 확인
+# -----------------
+
 now = datetime.now()
 
+funny_messages = [
+    "일어나세요. 외출 시간입니다.",
+    "출발하지 않으면 지각입니다.",
+    "버스가 당신을 기다리지 않습니다.",
+    "5분만 더는 허용되지 않습니다.",
+    "오늘도 멋진 하루 시작해봅시다."
+]
+
 for alarm in alarms:
-    alarm_time = datetime.strptime(
+
+    alarm_dt = datetime.strptime(
         alarm["time"],
         "%Y-%m-%d %H:%M"
     )
 
     if (
-        now.year == alarm_time.year and
-        now.month == alarm_time.month and
-        now.day == alarm_time.day and
-        now.hour == alarm_time.hour and
-        now.minute == alarm_time.minute
+        now.year == alarm_dt.year and
+        now.month == alarm_dt.month and
+        now.day == alarm_dt.day and
+        now.hour == alarm_dt.hour and
+        now.minute == alarm_dt.minute
     ):
+
+        msg = random.choice(funny_messages)
 
         st.balloons()
 
         st.error("🚨 외출 시간입니다!")
 
-        text = (
-            "일어나세요! 외출 시간입니다! "
-            "지금 출발하지 않으면 지각할 수 있습니다!"
-        )
+        st.write(msg)
 
         tts = gTTS(
-            text=text,
+            text=msg,
             lang="ko"
         )
 
-        tts.save("alarm_voice.mp3")
+        tts.save("alarm.mp3")
 
-        audio_file = open(
-            "alarm_voice.mp3",
-            "rb"
-        )
+        with open("alarm.mp3", "rb") as f:
+            st.audio(
+                f.read(),
+                format="audio/mp3"
+            )
 
-        st.audio(
-            audio_file.read(),
-            format="audio/mp3",
-            autoplay=True
-        )
+        alarms.remove(alarm)
+        save_alarms(alarms)
+
+        break
