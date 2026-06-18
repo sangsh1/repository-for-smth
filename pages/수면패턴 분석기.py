@@ -1,105 +1,104 @@
 import streamlit as st
-from datetime import datetime, timedelta
 
-# 1. 페이지 기본 설정
+# 1. 페이지 설정
 st.set_page_config(
-    page_title="개운한 아침을 위한 수면 계산기",
-    page_icon="🌙",
+    page_title="나의 맞춤형 수면 패턴 분석기",
+    page_icon="📊",
     layout="centered"
 )
 
-# 2. 앱 타이틀 및 소개
-st.title("🌙 수면 타임 추천 계산기")
+# 2. 타이틀 및 앱 소개
+st.title("📊 나의 수면 패턴 분석기")
 st.markdown("""
-사람의 수면은 보통 **90분 주기**로 반복됩니다. 
-수면 주기가 끝나는 시점에 깨어나야 알람을 들었을 때 개운하게 일어날 수 있습니다.
-잠드는 데 걸리는 평균 시간(**15분**)을 고려한 최적의 시간을 찾아보세요!
+최근 수면 습관을 입력하고 나의 **수면 효율성 점수**와 **수면 상태 진단**을 받아보세요.
+의학적으로 수면 효율이 **85% 이상**일 때 건강한 수면 패턴이라고 합니다.
 """)
 
 st.divider()
 
-# 3. 사이드바 - 수면 팁 정보
+# 3. 사이드바 - 분석 기준 안내
 with st.sidebar:
-    st.header("💡 건강한 수면 팁")
+    st.header("🔍 수면 분석 기준")
     st.markdown("""
-    * **90분 주기 법칙**: 보통 5~6번의 수면 주기(7.5시간~9시간)를 채우는 것이 성인에게 가장 이상적입니다.
-    * **스마트폰 멀리하기**: 잠들기 30분 전 전자기기 사용은 멜라토닌 분비를 방해해요.
-    * **일정한 시간**: 주말에도 평소와 비슷한 시간에 일어나면 생체 리듬이 유지됩니다.
+    * **수면 효율이란?**
+      침대에 누워있는 시간 중 실제로 잠든 시간의 비율입니다.
+    
+    * **점수별 상태 정의**
+      * 🟢 **85% 이상**: 양호 (건강한 패턴)
+      * 🟡 **75% ~ 84%**: 주의 (수면 환경 개선 필요)
+      * 🔴 **75% 미만**: 불량 (불면증 및 습관 교정 필요)
     """)
-    st.info("이 앱은 과학적인 90분 수면 주기 이론을 바탕으로 계산되었습니다.")
+    st.info("💡 누워있는 시간 대비 잠든 시간이 많아야 양질의 수면입니다.")
 
-# 4. 메인 기능 (탭 분리)
-tab1, tab2 = st.tabs(["⏰ 언제 자야 할까요?", "💤 지금 자면 언제 깰까요?"])
+# 4. 사용자 데이터 입력 구간
+st.subheader("📝 최근 수면 기록 입력")
 
-# --- 탭 1: 기상 시간을 입력하여 취침 시간 추천받기 ---
-with tab1:
-    st.subheader("목표 기상 시간 입력")
+with st.form(key="sleep_form"):
+    col1, col2 = st.columns(2)
     
-    # 시간 선택 UI (기본값 설정시 예외 처리 포함)
-    try:
-        target_time = st.time_input("몇 시에 일어나고 싶으신가요?", value=datetime.strptime("07:00", "%H:%M").time())
-    except Exception as e:
-        st.error("시간 선택 중 오류가 발생했습니다. 올바른 시간 형식인지 확인해주세요.")
-        target_time = datetime.now().time()
-
-    if st.button("추천 취침 시간 보기", key="btn_sleep"):
-        # 오늘 날짜와 입력된 시간을 조합하여 datetime 객체 생성
-        today = datetime.today()
-        target_datetime = datetime.combine(today, target_time)
-        
-        st.success(f"🎯 **{target_time.strftime('%H:%M')}**에 깨어나기 위한 추천 취침 시간입니다:")
-        st.caption("(잠드는 시간 15분을 미리 반영한 결과입니다.)")
-        
-        # 수면 주기 계산 (4주기: 6시간, 5주기: 7.5시간, 6주기: 9시간) + 잠드는 시간 15분 역산
-        cycles = [6, 5, 4]  # 추천 순서 (9시간, 7.5시간, 6시간 수면)
-        
-        col1, col2, col3 = st.columns(3)
-        cols = [col1, col2, col3]
-        
-        for i, cycle in enumerate(cycles):
-            # (수면 시간 + 잠드는 시간 15분)을 빼줌
-            total_minutes_to_subtract = (cycle * 90) + 15
-            suggested_sleep_time = target_datetime - timedelta(minutes=total_minutes_to_subtract)
-            
-            with cols[i]:
-                st.metric(
-                    label=f"{cycle}주기 ({cycle*1.5}시간 수면)", 
-                    value=suggested_sleep_time.strftime("%H:%M")
-                )
-                if cycle == 5:
-                    st.caption("⭐ 가장 추천 (7.5h)")
-                elif cycle == 6:
-                    st.caption("💤 듬뿍 숙면 (9.0h)")
-                else:
-                    st.caption("🏃 최소 수면 (6.0h)")
-
-# --- 탭 2: 지금 잘 때 기상 시간 추천받기 ---
-with tab2:
-    st.subheader("지금 바로 침대로 가시나요?")
+    with col1:
+        target_sleep = st.number_input("평소 나에게 필요한 목표 수면 시간 (시간)", min_value=4.0, max_value=12.0, value=7.5, step=0.5)
+        bed_time = st.number_input("어제 총 침대에 누워있던 시간 (시간)", min_value=1.0, max_value=24.0, value=8.0, step=0.5)
     
-    if st.button("지금 잘 때 기상 시간 확인", key="btn_wake"):
-        now = datetime.now()
-        # 잠드는 시간 15분 더하기
-        sleep_start = now + timedelta(minutes=15)
+    with col2:
+        latency = st.number_input("불을 끄고 잠들 때까지 걸린 시간 (분)", min_value=0, max_value=120, value=20, step=5)
+        wake_count = st.number_input("자다가 중간에 깨어난 횟수 (회)", min_value=0, max_value=10, value=1, step=1)
+    
+    # 예외 방지: 중간에 깨서 뒤척인 시간 자동 산정 (1회당 평균 10분으로 가정)
+    wake_minutes = wake_count * 10
+    
+    submit_button = st.form_submit_button(label="📊 나의 수ence 패턴 분석하기")
+
+# 5. 분석 및 결과 출력
+if submit_button:
+    # 계산 로직 (시간 단위를 분 단위로 통일하여 계산)
+    total_bed_minutes = bed_time * 60
+    actual_sleep_minutes = total_bed_minutes - latency - wake_minutes
+    
+    # 예외 처리: 입력값이 비현실적이어서 실제 수면 시간이 0 이하가 되는 경우 방지
+    if actual_sleep_minutes <= 0:
+        st.error("⚠️ 입력된 뒤척인 시간과 잠들기까지의 시간이 총 누워있던 시간보다 길거나 같습니다. 입력 값을 확인해주세요.")
+    else:
+        # 수면 효율 계산 (%)
+        sleep_efficiency = (actual_sleep_minutes / total_bed_minutes) * 100
+        actual_sleep_hours = round(actual_sleep_minutes / 60, 1)
         
-        st.info(f"현재 시간: {now.strftime('%H:%M')} (약 {sleep_start.strftime('%H:%M')} 쯤 잠들 대 전제)")
+        # 수면 빚(Sleep Debt) 계산
+        sleep_debt = target_sleep - actual_sleep_hours
         
-        cycles = [4, 5, 6]  # 6시간, 7.5시간, 9시간 뒤 기상
+        st.subheader("📋 수면 패턴 분석 결과 보고서")
         
-        col1, col2, col3 = st.columns(3)
-        cols = [col1, col2, col3]
+        # 결과 대시보드 시각화
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            st.metric(label="실제 수면 시간", value=f"{actual_sleep_hours} 시간")
+        with c2:
+            st.metric(label="수면 효율성", value=f"{sleep_efficiency:.1f} %")
+        with c3:
+            if sleep_debt > 0:
+                st.metric(label="족한 수면(수면 빚)", value=f"{sleep_debt:.1f} 시간", delta=f"-{sleep_debt:.1f}", delta_color="inverse")
+            else:
+                st.metric(label="수면 충족도", value="충분함", delta=f"+{abs(sleep_debt):.1f}")
+
+        st.markdown("---")
         
-        for i, cycle in enumerate(cycles):
-            total_minutes_to_add = (cycle * 90)
-            suggested_wake_time = sleep_start + timedelta(minutes=total_minutes_to_add)
+        # 종합 진단 및 솔루션 제안
+        st.markdown("### 🩺 종합 진단 결과")
+        
+        # 1단계: 수면 효율에 따른 진단
+        if sleep_efficiency >= 85:
+            st.success("🟢 **양호: 효율적인 수면을 취하고 계십니다!**")
+            st.markdown("침대에 누워 불필요하게 뒤척이는 시간이 적고 알차게 주무셨습니다. 현재의 수면 환경과 취침 전 루틴을 잘 유지하세요.")
+        elif sleep_efficiency >= 75:
+            st.warning("🟡 **주의: 수면 효율을 개선할 여지가 있습니다.**")
+            st.markdown("잠들기까지 다소 시간이 걸리거나 중간에 깨는 현상이 있습니다. 취침 1시간 전 스마트폰 사용을 줄이고 방을 더 어둡고 선선하게 유지해 보세요.")
+        else:
+            st.error("🔴 **불량: 수면 조각화 및 비효율적 패턴이 관찰됩니다.**")
+            st.markdown("누워있는 시간에 비해 실제 깊은 잠에 든 시간이 많이 부족합니다. 잠이 오지 않을 때는 침대에서 일어나 가벼운 독서를 하다가 다시 졸릴 때 눕는 '자극 조절 요법'을 추천합니다.")
             
-            with cols[i]:
-                st.metric(
-                    label=f"{cycle}주기 ({cycle*1.5}시간 뒤)", 
-                    value=suggested_wake_time.strftime("%H:%M")
-                )
-                if cycle == 5:
-                    st.caption("⭐ 가장 추천")
+        # 2단계: 수면 시간에 따른 추가 조언
+        if sleep_debt > 1.5:
+            st.info(f"⚠️ **추가 조언**: 현재 목표하신 시간에 비해 **{sleep_debt:.1f}시간** 수면이 부족합니다. 주중에 밀린 잠은 주말에 1~2시간 일찍 잠드는 방식으로 보충하여 수면 빚을 탕감해 주세요.")
 
 st.divider()
-st.center = st.markdown("<p style='text-align: center; color: gray;'>오늘 밤도 좋은 꿈 꾸세요! 🌙</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; color: gray;'>정확한 분석을 위해 매일 아침 꾸준히 기록해 보세요! 🛌</p>", unsafe_allow_html=True)
